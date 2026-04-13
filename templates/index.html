@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akıllı Şirket ve İş İlanı Arama</title>
+    <!-- Modern Yazı Tipi -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            flex: 1;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.8);
+            color: white;
+            font-size: 1.15rem;
+            font-family: 'Outfit', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        select {
+            padding: 18px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.8);
+            color: white;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            outline: none;
+            cursor: pointer;
+        }
+
+        button {
+            background: linear-gradient(to right, var(--primary), #2563eb);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 28px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .job-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: var(--text-main);
+        }
+
+        .company-name {
+            color: var(--primary);
+            font-weight: 500;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .skill-tag {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .description {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 50px 0;
+            color: #60a5fa;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .loading-pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 0.5; transform: scale(1); }
+        }
+
+        .no-results {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            padding: 60px;
+            grid-column: 1 / -1;
+            background: rgba(255,255,255,0.02);
+            border-radius: 16px;
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Akıllı İş İlanı Arama Ağı</h1>
+        <p class="subtitle">İşverenlerle yetenekleri birbirine bağlayan NLP (Doğal Dil İşleme) destekli platform.</p>
+    </header>
+
+    <div class="search-box">
+        <div class="input-group">
+            <input type="text" id="searchInput" placeholder="Örn: Node.js bilen Front End kodlayıcısı..." onkeypress="handleKeyPress(event)">
+        </div>
+        <select id="methodSelect">
+            <option value="hybrid">✨ Hybrid (Modern BM25 + SBERT Yapay Zeka)</option>
+            <option value="sbert">SBERT (Akıllı Anlamsal - AI)</option>
+            <option value="tfidf">TF-IDF (Klasik Kelime Eşleşmesi)</option>
+        </select>
+        <button onclick="performSearch()">İlan Bul</button>
+    </div>
+
+    <div id="loader" class="loader loading-pulse">
+        Yapay Zeka tüm veri setini tarıyor... Lütfen bekleyin.
+    </div>
+
+    <div id="statsInfo" style="text-align: right; color: #94a3b8; font-size: 0.95rem; margin-bottom: 15px; display: none;"></div>
+    
+    <div class="results" id="resultsContainer">
+        <!-- Results -->
+    </div>
+</div>
+
+<script>
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') performSearch();
+    }
+
+    async function performSearch() {
+        const query = document.getElementById('searchInput').value;
+        const method = document.getElementById('methodSelect').value;
+        const container = document.getElementById('resultsContainer');
+        const loader = document.getElementById('loader');
+        const stats = document.getElementById('statsInfo');
+        
+        if (!query.trim()) return;
+
+        container.innerHTML = '';
+        stats.style.display = 'none';
+        loader.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, method })
+            });
+
+            const results = await response.json();
+            loader.style.display = 'none';
+
+            if (results.error) {
+                container.innerHTML = `<div class="no-results">Hata oluştu: ${results.error}</div>`;
+                return;
+            }
+
+            if (results.length === 0 || results[0].score === 0) {
+                container.innerHTML = '<div class="no-results">Bu arama terimiyle eşleşen sonuç bulunamadı. Lütfen kelimeleri değiştirin veya SBERT yöntemini deneyin.</div>';
+                return;
+            }
+            
+            const latency = results[0]?.latency_ms || 0;
+            stats.innerHTML = `Sorgu tamamlandı. (Yanıt Süresi: <span style="color:#60a5fa;font-weight:bold">${latency} ms</span>)`;
+            stats.style.display = 'block';
+
+            results.forEach((job) => {
+                // Ignore zero score jobs entirely
+                if(job.score === 0) return;
+
+                const skillTags = job.skills.map(s => `<span class="skill-tag">${s.trim()}</span>`).join('');
+                const scoreColor = job.score > 40 ? 'var(--success)' : (job.score > 15 ? '#fbbf24' : '#ef4444');
+                const scoreBg = job.score > 40 ? 'rgba(16, 185, 129, 0.1)' : (job.score > 15 ? 'rgba(251, 191, 36, 0.1)' : 'rgba(239, 68, 68, 0.1)');
+                
+                container.innerHTML += `
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="job-title">${job.title}</h3>
+                                <p class="company-name">🏢 ${job.company}</p>
+                            </div>
+                            <div class="score-badge" style="color: ${scoreColor}; background: ${scoreBg};">
+                                🎯 %${job.score} 
+                            </div>
+                        </div>
+                        <div class="skills">${skillTags}</div>
+                        <p class="description">${job.description}</p>
+                    </div>
+                `;
+            });
+
+        } catch (error) {
+            loader.style.display = 'none';
+            container.innerHTML = '<div class="no-results">Sunucuya bağlanılamadı. Sistem kapalı olabilir.</div>';
+        }
+    }
+</script>
+
+</body>
+</html>

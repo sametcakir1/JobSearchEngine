@@ -1,0 +1,64 @@
+=== ÖRNEK ÇIKTILAR VE HATA ANALİZİ ===
+
+Aşağıda klasik kelime eşleştirme (TF-IDF) ile yapay zeka tabanlı anlamsal eşleşmenin (SBERT) farkları analiz edilmiştir.
+
+SORGUMUZ: 'python backend developer'
+----------------------------------------
+1️⃣ YÖNTEM 1 (TF-IDF):
+ Bulunan İlan: Backend Engineer   | Benzerlik Skoru: 0.294 | Süre: 1.72 ms
+2️⃣ YÖNTEM 2 (SBERT):
+ Bulunan İlan: Backend Engineer | Benzerlik Skoru: 0.697 | Süre: 13.73 ms
+
+👉 HATA ANALİZİ VE YORUM:
+Her iki algoritma da belli oranda kelime eşleşmesi yakaladı. Ancak skora bakıldığında TF-IDF'in kelime sayımına, SBERT'in ise bağlama odaklandığı görülüyor.
+
+
+=========================================
+
+SORGUMUZ: 'front end web tasarımları yapacak bilgisayarcı'
+----------------------------------------
+1️⃣ YÖNTEM 1 (TF-IDF):
+ Bulunan İlan: UI/UX Designer   | Benzerlik Skoru: 0.168 | Süre: 1.11 ms
+2️⃣ YÖNTEM 2 (SBERT):
+ Bulunan İlan: Frontend Developer | Benzerlik Skoru: 0.669 | Süre: 12.55 ms
+
+👉 HATA ANALİZİ VE YORUM:
+Her iki algoritma da belli oranda kelime eşleşmesi yakaladı. Ancak skora bakıldığında TF-IDF'in kelime sayımına, SBERT'in ise bağlama odaklandığı görülüyor.
+
+
+=========================================
+
+SORGUMUZ: 'yapay zeka sistemleri geliştiren personel'
+----------------------------------------
+1️⃣ YÖNTEM 1 (TF-IDF):
+ Bulunan İlan: İlan Bulunamadı (0 eşleşme)   | Benzerlik Skoru: 0.000 | Süre: 0.99 ms
+2️⃣ YÖNTEM 2 (SBERT):
+ Bulunan İlan: Machine Learning Engineer | Benzerlik Skoru: 0.612 | Süre: 12.42 ms
+
+👉 HATA ANALİZİ VE YORUM:
+TF-IDF kelime kelimesine eşleşme aradığı için kullanıcının girdiği kelimeleri ilanlarda bulamadı ve DOĞRU CEVABI KAÇIRDI (Yanlış çıktı/False Negative). SBERT ise cümlelerin 'anlamını' (Vektör Uzayını) bildiği için kelimeler farklı olsa bile aranan yeteneğin başlığını DOĞRU olarak tahmin etti.
+
+
+=========================================
+
+SORGUMUZ: 'sunucu ve altyapı dağıtımı otomasyonu'
+----------------------------------------
+1️⃣ YÖNTEM 1 (TF-IDF):
+ Bulunan İlan: Full Stack Developer   | Benzerlik Skoru: 0.220 | Süre: 1.00 ms
+2️⃣ YÖNTEM 2 (SBERT):
+ Bulunan İlan: DevOps Engineer | Benzerlik Skoru: 0.615 | Süre: 12.38 ms
+
+👉 HATA ANALİZİ VE YORUM:
+Her iki algoritma da belli oranda kelime eşleşmesi yakaladı. Ancak skora bakıldığında TF-IDF'in kelime sayımına, SBERT'in ise bağlama odaklandığı görülüyor.
+
+
+=========================================
+
+
+=== GENEL DEĞERLENDİRME TABLOSU ===
+ Model  Ortalama Gecikme (ms)
+ SBERT              12.766659
+TF-IDF               1.203775
+
+PROJE KONUSUNA ÖZEL ANALİZ (BİTİRİŞ):
+Bu uygulama, kelime bazlı arama (TF-IDF) yerine kullanıcı odaklı ve bağlamın gücünden faydalanan (SBERT) bir mimariye ihtiyaç duyduğunu kanıtlamıştır. İş arayan adaylar teknik terimleri farklı ifade edebilir (Örn: Coder, Programmer, Developer). Sistemimizin SBERT (Yapay Zeka) modeli kullanarak bu değişkenlikten etkilenmemesi sağlanmıştır. Ancak SBERT kullanımı sistem maaliyetlerini ufak oranda (.ms bazlı gecikmeler) artırmıştır.

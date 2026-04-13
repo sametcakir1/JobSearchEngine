@@ -1,0 +1,23 @@
+# Python environments
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDEs
+.idea/
+.vscode/
+
+# Environment variables
+.env
+
+# MacOS
+.DS_Store
+
+# Virtual environment created by python -m venv
+venv/
+
+# Large files if any, CSV is small right now but still good practice, wait dataset is small enough to push.
+# *.csv
