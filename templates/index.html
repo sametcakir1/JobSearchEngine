@@ -240,8 +240,9 @@
             <input type="text" id="searchInput" placeholder="Örn: Node.js bilen Front End kodlayıcısı..." onkeypress="handleKeyPress(event)">
         </div>
         <select id="methodSelect">
-            <option value="hybrid">✨ Hybrid (Modern BM25 + SBERT Yapay Zeka)</option>
+            <option value="hybrid">✨ Hibrit (Ensemble %70 AI + %30 BM25)</option>
             <option value="sbert">SBERT (Akıllı Anlamsal - AI)</option>
+            <option value="bm25">BM25 (Gelişmiş Kelime Eşleşmesi)</option>
             <option value="tfidf">TF-IDF (Klasik Kelime Eşleşmesi)</option>
         </select>
         <button onclick="performSearch()">İlan Bul</button>

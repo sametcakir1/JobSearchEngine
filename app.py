@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import pandas as pd
-from search_engine import TFIDFSearchEngine, SBERTSearchEngine, HybridSearchEngine, BM25SearchEngine
+from search_engine import TFIDFSearchEngine, BM25SearchEngine, SBERTSearchEngine, HybridSearchEngine
 import os
 
 app = Flask(__name__)
@@ -9,45 +9,49 @@ print("Arama motorları ve veri setleri başlatılıyor, lütfen bekleyin...")
 df = pd.read_csv("job_dataset.csv")
 df['search_content'] = df['title'] + " " + df['skills'] + " " + df['description']
 
-# Modelleri yükleyelim (ilk uygulamaya girişte birkaç saniye sürebilir)
+# Yapay Zeka anlamsal modeli (En yavaş yüklenen)
 sbert_engine = SBERTSearchEngine()
 sbert_engine.fit(df, 'search_content')
 
+# İstatistiksel model 1
 tfidf_engine = TFIDFSearchEngine()
 tfidf_engine.fit(df, 'search_content')
 
+# İstatistiksel model 2 (Gelişmiş)
 bm25_engine = BM25SearchEngine()
 bm25_engine.fit(df, 'search_content')
 
-hybrid_engine = HybridSearchEngine(lexical_engine=bm25_engine, sbert_engine=sbert_engine, sbert_weight=0.7)
+# Hibrit Model (Altın Standart: SBERT %70 + BM25 %30)
+hybrid_engine = HybridSearchEngine(sbert_engine, bm25_engine, alpha=0.7)
 
-print("✅ Modeller başarıyla yüklendi. Web arayüzüne gidebilirsiniz.")
+print("✅ Tüm Modeller (TF-IDF, BM25, SBERT, Hibrit) başarıyla yüklendi! Web arayüzüne gidebilirsiniz.")
 
 @app.route('/')
 def index():
-    # templates/index.html dosyasını render eder
     return render_template('index.html')
 
 @app.route('/api/search', methods=['POST'])
 def search():
     data = request.json
     query = data.get('query', '')
-    method = data.get('method', 'sbert')
+    method = data.get('method', 'hybrid')
     
     if not query:
         return jsonify([])
         
     try:
-        if method == 'sbert':
-            results_df, latency = sbert_engine.search(query, top_k=8)
-        elif method == 'hybrid':
+        # Seçilen metoda göre arama yapma
+        if method == 'hybrid':
             results_df, latency = hybrid_engine.search(query, top_k=8)
+        elif method == 'bm25':
+            results_df, latency = bm25_engine.search(query, top_k=8)
+        elif method == 'sbert':
+            results_df, latency = sbert_engine.search(query, top_k=8)
         else:
             results_df, latency = tfidf_engine.search(query, top_k=8)
             
         results = results_df.to_dict(orient='records')
         
-        # Sonuçları web arayüzüne göndermek için hazırla
         formatted_results = []
         for r in results:
             formatted_results.append({

@@ -6,40 +6,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 
-class BM25SearchEngine:
-    def __init__(self):
-        self.bm25_model = None
-        self.df = None
-
-    def fit(self, df, text_column):
-        self.df = df
-        # BM25 expects a list of words for each document
-        tokenized_corpus = df[text_column].fillna('').apply(lambda x: x.lower().split()).tolist()
-        self.bm25_model = BM25Okapi(tokenized_corpus)
-
-    def search(self, query, top_k=5):
-        start_time = time.time()
-        tokenized_query = query.lower().split()
-        
-        # Calculate BM25 scores
-        doc_scores = self.bm25_model.get_scores(tokenized_query)
-        
-        # Get top indices
-        top_indices = np.argsort(doc_scores)[::-1][:top_k]
-        
-        results = []
-        for idx in top_indices:
-            res = self.df.iloc[idx].copy()
-            res['score'] = doc_scores[idx]
-            results.append(res)
-            
-        latency = time.time() - start_time
-        return pd.DataFrame(results), latency
-
 # YÖNTEM 1: Klasik Yaklaşım (TF-IDF Lexical Search)
 class TFIDFSearchEngine:
     def __init__(self):
-        # Stop words olarak ingilizce verilmiş ama biz Türkçe metinler yazdıysak basic bir vectorizer kuralım
         self.vectorizer = TfidfVectorizer()
         self.tfidf_matrix = None
         self.df = None
@@ -50,13 +19,8 @@ class TFIDFSearchEngine:
 
     def search(self, query, top_k=5):
         start_time = time.time()
-        # Sorguyu vektör uzayına çevirme
         query_vec = self.vectorizer.transform([query])
-        
-        # Kosinüs benzerliği (Sorgu vs Tüm İlanlar)
         similarities = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
-        
-        # En yüksek skorlu Top K indexi alma
         top_indices = similarities.argsort()[-top_k:][::-1]
         
         results = []
@@ -69,9 +33,37 @@ class TFIDFSearchEngine:
         return pd.DataFrame(results), latency
 
 
-# YÖNTEM 2: Yapay Zeka Özellikli Yaklaşım (SBERT Anlamsal - Semantic Search)
+# YÖNTEM 2: BM25 (Gelişmiş Lexical Search)
+class BM25SearchEngine:
+    def __init__(self):
+        self.bm25 = None
+        self.df = None
+
+    def fit(self, df, text_column):
+        self.df = df
+        # BM25 requires tokenized lists of strings
+        tokenized_corpus = [str(doc).lower().split(" ") for doc in df[text_column].fillna('')]
+        self.bm25 = BM25Okapi(tokenized_corpus)
+
+    def search(self, query, top_k=5):
+        start_time = time.time()
+        tokenized_query = query.lower().split(" ")
+        doc_scores = self.bm25.get_scores(tokenized_query)
+        
+        top_indices = np.argsort(doc_scores)[::-1][:top_k]
+        
+        results = []
+        for idx in top_indices:
+            res = self.df.iloc[idx].copy()
+            res['score'] = doc_scores[idx]
+            results.append(res)
+            
+        latency = time.time() - start_time
+        return pd.DataFrame(results), latency
+
+
+# YÖNTEM 3: Yapay Zeka Özellikli Yaklaşım (SBERT Anlamsal - Semantic Search)
 class SBERTSearchEngine:
-    # Çok dilli (Türkçe destekli) ve hızlı bir model kullanıyoruz
     def __init__(self, model_name='paraphrase-multilingual-MiniLM-L12-v2'):
         self.model = SentenceTransformer(model_name)
         self.embeddings = None
@@ -80,7 +72,6 @@ class SBERTSearchEngine:
     def fit(self, df, text_column):
         self.df = df
         print("SBERT Embeddings başlatıldı. (Bu işlem veri büyüklüğüne göre biraz sürebilir...)")
-        # Tüm ilan veri setini embedding vektörlerine çeviriyoruz
         self.embeddings = self.model.encode(df[text_column].fillna('').tolist(), convert_to_tensor=True)
         print("SBERT Embeddings tamamlandı.")
 
@@ -88,13 +79,9 @@ class SBERTSearchEngine:
         from sentence_transformers import util
         start_time = time.time()
         
-        # Kullanıcı sorgusunu vektöre çevirme
         query_embedding = self.model.encode(query, convert_to_tensor=True)
-        
-        # Vektörler arası kosinüs benzerliği hesaplama
         cos_scores = util.cos_sim(query_embedding, self.embeddings)[0]
         
-        # En iyi sonuçları getirme
         top_results = np.argpartition(-cos_scores.cpu().numpy(), range(top_k))[:top_k]
         top_results = sorted(top_results, key=lambda x: cos_scores[x], reverse=True)
         
@@ -109,45 +96,48 @@ class SBERTSearchEngine:
         return pd.DataFrame(results), latency
 
 
-# YÖNTEM 3: Hibrit Arama (BM25 + SBERT)
+# YÖNTEM 4: Hibrit Arama (Ensemble: SBERT %70 + BM25 %30)
 class HybridSearchEngine:
-    def __init__(self, lexical_engine, sbert_engine, sbert_weight=0.7):
-        self.lexical_engine = lexical_engine
-        self.sbert_engine = sbert_engine
-        self.sbert_weight = sbert_weight # Anlama %70, kelimeye %30 önem ver
+    def __init__(self, sbert_engine, bm25_engine, alpha=0.70):
+        self.sbert = sbert_engine
+        self.bm25 = bm25_engine
+        self.alpha = alpha  # SBERT'in ağırlığı
+        self.df = sbert_engine.df
+
+    def _minmax_scale(self, scores):
+        min_val = np.min(scores)
+        max_val = np.max(scores)
+        if max_val - min_val == 0:
+            return np.zeros_like(scores)
+        return (scores - min_val) / (max_val - min_val)
 
     def search(self, query, top_k=5):
         start_time = time.time()
         
-        # Lexical (BM25) Skorları
-        lex_res, _ = self.lexical_engine.search(query, top_k=len(self.lexical_engine.df))
-        # SBERT Skorları
-        sbert_res, _ = self.sbert_engine.search(query, top_k=len(self.sbert_engine.df))
+        # 1. SBERT Skorları
+        from sentence_transformers import util
+        query_embedding = self.sbert.model.encode(query, convert_to_tensor=True)
+        sbert_scores = util.cos_sim(query_embedding, self.sbert.embeddings)[0].cpu().numpy()
         
-        lex_scores = lex_res.set_index(lex_res.index)['score']
-        sbert_scores = sbert_res.set_index(sbert_res.index)['score']
+        # 2. BM25 Skorları
+        tokenized_query = query.lower().split(" ")
+        bm25_scores = self.bm25.bm25.get_scores(tokenized_query)
         
-        df_combined = self.lexical_engine.df.copy()
+        # Min-Max Normalizasyonu (Skorları 0-1 aralığına sıkıştırma)
+        sbert_scaled = self._minmax_scale(sbert_scores)
+        bm25_scaled = self._minmax_scale(bm25_scores)
         
-        df_combined['lexical_score'] = df_combined.index.map(lex_scores).fillna(0)
-        df_combined['sbert_score'] = df_combined.index.map(sbert_scores).fillna(0)
+        # Ağırlıklandırılarak birleştirilmesi (Rapor Tablo 1'deki Hibrit Yöntem)
+        hybrid_scores = (self.alpha * sbert_scaled) + ((1.0 - self.alpha) * bm25_scaled)
         
-        # BM25 skorları sınırsızdır (Örn: 15.6, 22.1). SBERT ise 0-1 arasıdır.
-        # Toplayabilmek için BM25 skorlarını 0-1 arasına normalize ediyoruz (Min-Max Scaling)
-        max_lex = df_combined['lexical_score'].max()
-        if max_lex > 0:
-            df_combined['lexical_score_norm'] = df_combined['lexical_score'] / max_lex
-        else:
-            df_combined['lexical_score_norm'] = 0.0
+        # En iyileri sıralama
+        top_indices = np.argsort(hybrid_scores)[::-1][:top_k]
+        
+        results = []
+        for idx in top_indices:
+            res = self.df.iloc[idx].copy()
+            res['score'] = hybrid_scores[idx]
+            results.append(res)
             
-        # SBERT zaten 0-1 arası kosinüs değeridir
-        df_combined['sbert_score_norm'] = df_combined['sbert_score'].clip(lower=0) 
-        
-        # HİBRİT FORMÜL (Normalize edilmiş skorlarla)
-        df_combined['score'] = (df_combined['sbert_score_norm'] * self.sbert_weight) + (df_combined['lexical_score_norm'] * (1 - self.sbert_weight))
-        
-        # Skorlara göre sırala ve top_k kadarını al
-        df_hybrid_top = df_combined.sort_values(by='score', ascending=False).head(top_k)
-        
         latency = time.time() - start_time
-        return df_hybrid_top, latency
+        return pd.DataFrame(results), latency
